@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JCraft Moveset Builder</title>
+<style>
+:root{--bg:#eef0f6;--pn:#fff;--ink:#1d2033;--mut:#69708c;--ln:#cfd4e4;--hd:#2a2150;--ac:#e0a526;--lk:#3a4fb8}
+@media(prefers-color-scheme:dark){:root{--bg:#14152a;--pn:#1d1f38;--ink:#e8eaf6;--mut:#9ba1c4;--ln:#363a63;--hd:#0f1030;--lk:#8fa2ff}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:Georgia,"Linux Libertine",serif;font-weight:normal;margin:.3em 0}
+h1{font-size:2em;border-bottom:1px solid var(--ln)}h2{font-size:1.5em;border-bottom:1px solid var(--ln);margin-top:1.3em}h3{font-size:1.15em;font-weight:bold;margin-top:1em}
+header{background:var(--hd);color:#fff;padding:10px 18px;display:flex;gap:12px;align-items:center;position:sticky;top:0;z-index:5;border-bottom:3px solid var(--ac)}
+header b{font:bold 1.15em Georgia,serif;flex:1}header span{display:flex;gap:8px}
+main{max-width:860px;margin:18px auto;padding:0 12px 90px}
+.pn{background:var(--pn);border:1px solid var(--ln);padding:14px 18px;margin:12px 0}
+button,select,input,textarea{font:inherit;color:inherit}
+input,textarea,select{background:var(--pn);border:1px solid var(--ln);padding:6px 8px;border-radius:3px;max-width:100%}
+input[type=text],textarea{width:100%}textarea{min-height:72px;resize:vertical;margin:2px 0 8px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:.9em}
+button{cursor:pointer;border:1px solid var(--ln);background:var(--pn);padding:6px 12px;border-radius:3px}
+button:hover{border-color:var(--lk)}button.p{background:var(--ac);border-color:var(--ac);color:#1d2033;font-weight:bold}
+button.x{padding:3px 9px;color:var(--mut)}
+header button{background:transparent;color:#fff;border-color:#fff6}header button.p{background:var(--ac);color:#1d2033}
+:focus-visible{outline:2px solid var(--lk);outline-offset:1px}
+.row{display:flex;gap:8px;align-items:center;margin:6px 0}.cl{flex:1;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.lb{color:var(--mut);font-size:.88em;display:block}.row .lb{width:78px;flex:none}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:640px){.two{grid-template-columns:1fr}}
+.mv{border-left:4px solid var(--ac);background:color-mix(in srgb,var(--bg) 45%,var(--pn));padding:10px 12px;margin:10px 0}
+.tag{background:var(--hd);color:#fff;padding:2px 9px;font-weight:bold;border-radius:3px;white-space:nowrap}
+.ch{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--ln);border-radius:3px;padding:2px 8px;background:var(--pn)}
+input.big{font:1.4em Georgia,serif;font-weight:bold}input.sm{width:130px}
+footer{position:fixed;bottom:0;left:0;right:0;background:var(--pn);border-top:1px solid var(--ln);padding:10px;display:flex;gap:8px;justify-content:center}
+.t{display:inline-block;border:1px solid var(--ln);border-radius:3px;padding:1px 8px;margin:2px 4px 2px 0;font-size:.9em}.t b{margin-right:6px;color:var(--mut)}
+main p{margin:.3em 0}
+</style></head><body>
+<header><b>JCraft: Eyes of Ender Moveset Builder</b><span id="hb"></span></header>
+<main id="app"></main>
+<footer id="ft" hidden><button class="p" onclick="dl()">Export .md</button><button onclick="cp(this)">Copy markdown</button></footer>
+<script>
+const $=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+const SL=['M1','Heavy','Barrage','Sp1','Sp2','Sp3','Utility','Ultimate'],VR=[['','Standing'],['Cr.','Crouching'],['Ae.','Aerial']],
+ST=['Category','Windup','Advantage','Endlag','Damage','Cooldown','Extra'],CAT=['Starter','Extender','Finisher','Zoning','Utility'],
+LT=['Short','Medium','Long','N/A'],LD=['Low','Medium','High','N/A'],
+EX=['Armor {amount}','Hyperarmor','Knockdown','Knockback','Long Range Effects','Meter Use','Meter Charge','Meter Requirement','Potion Effect(s)'],
+LV={short:1,low:1,medium:2,med:2,long:3,high:3};
+let S=null;
+const blank=()=>({name:'',arch:'',desc:'',pros:[],cons:[],pas:[],mv:[],gp:['','',''],ck:'',au:{},bb:[]}),
+K=m=>m.v+m.s,lvl=s=>s=='Damage'?LD:LT,
+rk=x=>{const m=x&&String(x.v).toLowerCase().match(/short|low|medium|med|long|high|\d+(?:\.\d+)?/g);return m?Math.max(...m.map(w=>LV[w]||parseFloat(w))):NaN},
+auto=m=>{const a=rk(m.st.Advantage);return isNaN(a)?'':S.mv.filter(o=>o!==m&&rk(o.st.Windup)<=a).map(K).join(', ')},
+srt=()=>S.mv.sort((a,b)=>SL.indexOf(a.s)-SL.indexOf(b.s)||VR.findIndex(x=>x[0]==a.v)-VR.findIndex(x=>x[0]==b.v)),
+lineOf=(L,k)=>L.findIndex(l=>l.includes('>')&&l.split('>')[0].trim().toLowerCase()==k.toLowerCase());
+function sync(c){
+ const L=S.ck?S.ck.split('\n'):[];
+ S.mv.forEach(m=>{const k=K(m),n=auto(m),ln=n?k+' > '+n:'',i=lineOf(L,k);
+  if(i<0){if(ln)L.push(ln)}
+  else if(k==c||L[i].slice(L[i].indexOf('>')+1).trim()==(S.au[k]||'')){if(ln)L[i]=ln;else L.splice(i,1)}
+  S.au[k]=n});
+ S.ck=L.join('\n');const t=$('ck');if(t)t.value=S.ck}
+const sv=(i,s,v)=>{S.mv[i].st[s].v=v;sync(K(S.mv[i]))},
+cat=(i,t,on)=>{const a=S.mv[i].st.Category.v;if(on)a.push(t);else a.splice(a.indexOf(t),1);a.sort((p,q)=>CAT.indexOf(p)-CAT.indexOf(q))},
+tg=(i,s)=>{const x=S.mv[i].st[s];x.m=1-x.m;x.v='';render();sync(K(S.mv[i]))},
+as=(i,s)=>{if(!s)return;S.mv[i].st[s]=s=='Category'?{v:[]}:s=='Extra'?{v:''}:{m:0,v:''};render()},
+rs=(i,s)=>{delete S.mv[i].st[s];render();sync(K(S.mv[i]))},
+dm=i=>{const k=K(S.mv[i]);S.mv.splice(i,1);S.ck=S.ck.split('\n').filter(l=>l.split('>')[0].trim()!=k).join('\n');delete S.au[k];render();sync()},
+ad=k=>{S[k].push('');render();const n=document.querySelectorAll('#'+k+' input');n[n.length-1].focus()},
+rc=()=>{if(confirm('Rebuild every line from the move stats? Manual edits to the Combo Key are lost.')){S.ck='';S.au={};sync()}},
+bs=(i,j,v)=>{const c=S.bb[i].c;c.length=j;c.push(v=='\u270e'?{v:'',man:1}:{v,man:0});if(v)c.push({v:'',man:0});render()},
+rm=(i,j)=>{const c=S.bb[i].c;c.length=j;c.push({v:'',man:0});render()},
+gh=()=>{if(confirm('Leave the editor? Anything not exported is lost.')){S=null;render()}};
+function addMv(){const s=$('sl').value,v=$('vr').value;if(S.mv.some(m=>m.s==s&&m.v==v))return alert(v+s+' already exists.');
+ S.mv.push({s,v,n:'',d:'',st:{}});srt();sync();render()}
+function opts(i,j){const c=S.bb[i].c,p=j&&c[j-1].v;let o=S.mv.map(K);
+ if(p){const L=S.ck.split('\n'),x=lineOf(L,p);if(x>=0){const n=L[x].slice(L[x].indexOf('>')+1).split(',').map(t=>t.trim().toLowerCase()).filter(t=>o.some(k=>k.toLowerCase()==t));
+  if(n.length)o=o.filter(k=>n.includes(k.toLowerCase()))}}
+ return o}
+const ol=(i,j,v)=>{const o=opts(i,j);if(v&&!o.includes(v))o.push(v);return o};
+function sr(m,i,s){const x=m.st[s];let c;
+ if(s=='Category')c=CAT.map(t=>`<label class="ch"><input type="checkbox" ${x.v.includes(t)?'checked':''} onchange="cat(${i},'${t}',this.checked)">${t}</label>`).join('');
+ else if(s=='Extra')c=`<input type="text" list="ex" value="${E(x.v)}" placeholder="Armor 2, Hyperarmor, Knockdown..." oninput="sv(${i},'Extra',this.value)">`;
+ else c=(x.m?`<input type="text" inputmode="decimal" class="sm" value="${E(x.v)}" placeholder="number" oninput="sv(${i},'${s}',this.value)">`
+  :`<select onchange="sv(${i},'${s}',this.value)"><option value="">-</option>${lvl(s).map(o=>`<option ${o==x.v?'selected':''}>${o}</option>`).join('')}</select>`)
+  +`<button class="x" onclick="tg(${i},'${s}')" title="Switch between presets and a manual number">${x.m?'Aa':'123'}</button>`;
+ return `<div class="row"><span class="lb">${s}</span><div class="cl">${c}</div><button class="x" onclick="rs(${i},'${s}')" title="Remove stat">×</button></div>`}
+const mc=(m,i)=>`<div class="mv"><div class="row"><span class="tag">${K(m)}</span><input type="text" placeholder="Move name" value="${E(m.n)}" oninput="S.mv[${i}].n=this.value"><button class="x" onclick="dm(${i})" title="Remove move">×</button></div>
+<textarea placeholder="Move description" oninput="S.mv[${i}].d=this.value">${E(m.d)}</textarea>
+${ST.filter(s=>m.st[s]).map(s=>sr(m,i,s)).join('')}
+<select onchange="as(${i},this.value)"><option value="">Add stat</option>${ST.filter(s=>!m.st[s]).map(s=>`<option>${s}</option>`).join('')}</select></div>`,
+lst=(k,t)=>`<h3>${t}</h3>`+S[k].map((x,i)=>`<div class="row"><input type="text" value="${E(x)}" oninput="S.${k}[${i}]=this.value"><button class="x" onclick="S.${k}.splice(${i},1);render()" title="Remove">×</button></div>`).join('')+(S[k].length<4?`<button onclick="ad('${k}')">Add a ${k=='pros'?'pro':'con'}</button>`:''),
+pc=(p,i)=>`<div class="mv"><div class="row"><input type="text" placeholder="Passive name" value="${E(p.n)}" oninput="S.pas[${i}].n=this.value"><button class="x" onclick="S.pas.splice(${i},1);render()" title="Remove">×</button></div><textarea placeholder="Passive description" oninput="S.pas[${i}].d=this.value">${E(p.d)}</textarea></div>`,
+bc=(b,i)=>`<div class="mv"><div class="row"><input type="text" placeholder="Combo name (optional)" value="${E(b.n)}" oninput="S.bb[${i}].n=this.value"><button class="x" onclick="S.bb.splice(${i},1);render()" title="Remove combo">×</button></div><div class="cl">${b.c.map((x,j)=>x.man?`<input type="text" class="sm" value="${E(x.v)}" placeholder="manual" oninput="S.bb[${i}].c[${j}].v=this.value"><button class="x" onclick="rm(${i},${j})" title="Use the move list">×</button>`:`<select onchange="bs(${i},${j},this.value)"><option value="">${j?'Then':'Start'}</option>${ol(i,j,x.v).map(o=>`<option ${o==x.v?'selected':''}>${E(o)}</option>`).join('')}<option value="\u270e">Manual input</option></select>`).join('<span class="lb">&gt;</span>')}</div></div>`;
+const home=()=>`<div class="pn"><h1>JCraft Moveset Builder</h1><p>Write, preview and export stand or spec movesets in the community template format.</p>
+<div class="row"><button class="p" onclick="S=blank();render()">Create</button><button onclick="$('im').hidden=!$('im').hidden">Import</button></div>
+<div id="im" hidden><p class="lb">Paste a moveset in the template markdown, or choose a .md file.</p><textarea id="it" class="mono" style="min-height:200px" placeholder="# Stand Name&#10;## Details&#10;..."></textarea>
+<div class="row"><button class="p" onclick="doImp($('it').value)">Load moveset</button><input type="file" accept=".md,.txt" onchange="fl(this)"></div></div></div>`;
+const editor=()=>`<div class="pn"><input type="text" class="big" placeholder="Stand or spec name" value="${E(S.name)}" oninput="S.name=this.value"></div>
+<h2>Details</h2><div class="pn"><label class="lb">Archetype</label><input type="text" placeholder="{char1 char2 ARCHETYPE}" value="${E(S.arch)}" oninput="S.arch=this.value">
+<label class="lb" style="margin-top:8px">Stand Description + Gimmick</label><textarea oninput="S.desc=this.value">${E(S.desc)}</textarea>
+<div class="two"><div id="pros">${lst('pros','Pros')}</div><div id="cons">${lst('cons','Cons')}</div></div>
+<h3>Passives</h3>${S.pas.map(pc).join('')}<button onclick="S.pas.push({n:'',d:''});render()">Add a passive</button></div>
+<h2>Moveset</h2><div class="pn">${S.mv.map(mc).join('')}<button class="p" onclick="$('pk').hidden=!$('pk').hidden">Add a move</button>
+<div id="pk" class="row" hidden><select id="sl">${SL.map(x=>`<option>${x}</option>`).join('')}</select><select id="vr">${VR.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select><button class="p" onclick="addMv()">Add</button></div></div>
+<h2>Playstyle</h2><div class="pn"><h3>Gameplan</h3>${['Neutral','Advantage','Disadvantage'].map((t,i)=>`<label class="lb">${t}</label><textarea oninput="S.gp[${i}]=this.value">${E(S.gp[i])}</textarea>`).join('')}
+<h3>Combo Key</h3><p class="lb">Filled in from each move's Advantage and Windup: a move combos into moves with an equal or shorter Windup. Edit any line by hand; a line is recalculated when its move's stats change.</p>
+<textarea id="ck" class="mono" style="min-height:170px" oninput="S.ck=this.value"></textarea><button onclick="rc()">Recalculate all lines</button>
+<h3>Bread &amp; Butters</h3>${S.bb.map(bc).join('')}<button onclick="S.bb.push({n:'',c:[{v:'',man:0}]});render()">Add a combo</button></div>
+<datalist id="ex">${EX.map(x=>`<option value="${E(x)}">`).join('')}</datalist>`;
+function render(){const h=$('hb');$('ft').hidden=!S;
+ if(!S){h.innerHTML='';$('app').innerHTML=home();return}
+ h.innerHTML='<button class="p" onclick="pv()">Preview</button><button onclick="gh()">Home</button>';
+ $('app').innerHTML=editor();$('ck').value=S.ck}
+const sx=x=>Array.isArray(x.v)?x.v.join(', '):x.v,nl=t=>String(t||'').trim().split('\n').join('  \n');
+function md(){
+ let o=`# ${S.name||'Stand Name'}\n\n## Details\n\n### Archetype: ${S.arch||'{char1 char2 ARCHETYPE}'}\n\n### Stand Description + Gimmick\n\n${nl(S.desc)}\n\n### Pros:\n\n${S.pros.filter(Boolean).map(x=>'- '+x).join('  \n')}\n\n### Cons\n\n${S.cons.filter(Boolean).map(x=>'- '+x).join('  \n')}\n\n## Moveset\n\n`;
+ S.pas.forEach(p=>o+=`### Passive${p.n?': '+p.n:''}\n\n${nl(p.d)}\n\n`);
+ S.mv.forEach(m=>o+=`### ${K(m)}: ${m.n||'Move Name'}\n\n`+[nl(m.d)].concat(ST.filter(s=>m.st[s]).map(s=>`[${s}: ${sx(m.st[s])}]`)).filter(Boolean).join('  \n')+'\n\n');
+ o+=`## Playstyle\n\n### Gameplan\n\nNeutral  \n${nl(S.gp[0])}\n\nAdvantage  \n${nl(S.gp[1])}\n\nDisadvantage  \n${nl(S.gp[2])}\n\n### Combo Key\n\n${nl(S.ck)}\n\n### Bread & Butters (Stand only combos)\n\n`;
+ return o+S.bb.filter(b=>b.c.some(x=>x.v)).map(b=>(b.n?`\u201c${b.n}\u201d  \n`:'')+b.c.filter(x=>x.v).map(x=>x.v).join('>')).join('  \n')+'\n'}
+function mh(t){let o='',ul=0;const cl=()=>{if(ul){o+='</ul>';ul=0}};
+ t.split('\n').forEach(l=>{l=l.trimEnd();let m;
+  if(m=l.match(/^(#{1,3}) (.*)/)){cl();o+=`<h${m[1].length}>${E(m[2])}</h${m[1].length}>`}
+  else if(m=l.match(/^- (.*)/)){if(!ul){o+='<ul>';ul=1}o+=`<li>${E(m[1])}</li>`}
+  else if(m=l.match(/^\[(\w+): (.*)\]$/))o+=`<span class="t"><b>${m[1]}</b>${E(m[2])}</span> `;
+  else if(l){cl();o+=`<p>${E(l)}</p>`}});cl();return o}
+function pv(){const w=window.open('','_blank');if(!w)return alert('Allow pop-ups to open the preview.');
+ w.document.write(`<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(S.name||'Preview')}</title><style>${document.querySelector('style').textContent}</style><main class="pn" style="margin:18px auto">${mh(md())}</main>`);w.document.close()}
+function dl(){const n=(S.name||'').replace(/[^\w\- ]+/g,'').trim().replace(/ +/g,'_'),a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([md()],{type:'text/markdown'}));a.download=(n||'moveset')+'.md';a.click()}
+function cp(b){navigator.clipboard.writeText(md()).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy markdown',1500)})}
+const fl=i=>{const f=i.files[0];if(f)f.text().then(t=>$('it').value=t)};
+function pst(k,x){
+ if(k=='Category')return{v:x.split(/[,\/&]|\band\b/i).map(t=>CAT.find(c=>c.toLowerCase()==t.trim().toLowerCase())).filter(Boolean)};
+ if(k=='Extra')return{v:x};
+ const a=k=='Damage'?LD:LT,w=x.toLowerCase().replace(/[^a-z\/]/g,''),M={short:0,low:0,med:1,medium:1,long:2,high:2,'n/a':3,na:3};
+ return Object.hasOwn(M,w)&&!x.includes(',')?{m:0,v:a[M[w]]}:{m:1,v:x}}
+function doImp(t){
+ t=t.replace(/\r/g,'').replace(/\\([\[\]+\->#*_~`])/g,'$1');
+ const s=blank(),B=[];let sec='',cur=null;
+ t.split('\n').forEach(l=>{let m;
+  if(m=l.match(/^# (.*)/))s.name=m[1].trim().replace(/^Stand Name$/,'');
+  else if(m=l.match(/^## (.*)/)){sec=m[1].trim().toLowerCase();cur=null}
+  else if(m=l.match(/^### (.*)/)){cur={h:m[1].trim(),b:[],sec};B.push(cur)}
+  else if(cur)cur.b.push(l.replace(/ +$/,''))});
+ const tx=b=>b.join('\n').trim();
+ B.forEach(({h,b,sec})=>{const k=h.toLowerCase();
+  if(sec=='details'){
+   if(k.startsWith('archetype'))s.arch=h.replace(/^archetype:?\s*/i,'').replace(/^\{char1 char2 ARCHETYPE\}$/,'');
+   else if(k.startsWith('stand description'))s.desc=tx(b);
+   else if(k.startsWith('pros')||k.startsWith('cons'))s[k[0]=='p'?'pros':'cons']=b.filter(x=>/^-\s*\S/.test(x)).map(x=>x.replace(/^-\s*/,'')).filter(x=>!/^\d$/.test(x)).slice(0,4)}
+  else if(sec=='moveset'){
+   const m=h.match(/^(Cr\.|Ae\.)?(M1|Heavy|Barrage|Sp[123]|Utility|Ultimate)\s*:\s*(.*)$/i);
+   if(k.startsWith('passive'))s.pas.push({n:h.replace(/^passive:?\s*/i,''),d:tx(b)});
+   else if(m){const v=m[1]?m[1][0].toUpperCase()+m[1].slice(1).toLowerCase():'',sl=SL.find(x=>x.toLowerCase()==m[2].toLowerCase()),d=[],st={};
+    b.forEach(l=>{const q=l.match(/^\[(\w+)\s*:\s*(.*)\]\s*$/);
+     if(q){const key=ST.find(x=>x.toLowerCase()==q[1].toLowerCase()),val=q[2].trim();if(key&&val)st[key]=pst(key,val)}else d.push(l)});
+    if((m[3].trim()=='Move Name'&&!Object.keys(st).length)||s.mv.some(o=>K(o)==v+sl))return;
+    s.mv.push({s:sl,v,n:m[3].trim(),d:d.join('\n').trim(),st})}}
+  else if(sec=='playstyle'){
+   if(k.startsWith('gameplan')){let i=-1;const g=[[],[],[]];
+    b.forEach(l=>{const j=['neutral','advantage','disadvantage'].indexOf(l.replace(/\*/g,'').trim().toLowerCase());if(j>=0)i=j;else if(i>=0)g[i].push(l)});
+    s.gp=g.map(a=>a.join('\n').trim())}
+   else if(k.startsWith('combo key'))s.ck=b.filter(l=>l.trim()&&l.trim()!='…').join('\n').trim();
+   else if(k.startsWith('bread')){let n='';
+    b.forEach(l=>{l=l.trim();const q=l.match(/^["\u201c](.*)["\u201d]$/);
+     if(q)n=q[1];else if(l.includes('>')){s.bb.push({n,c:l.split('>').map(x=>x.trim()).filter(Boolean).map(x=>{const f=s.mv.map(K).find(k=>k.toLowerCase()==x.toLowerCase());return{v:f||x,man:f?0:1}})});n=''}})}}});
+ if(!s.name&&!s.mv.length&&!s.desc)return alert('No moveset found in that text. Use the template markdown format.');
+ S=s;srt();S.bb.forEach(b=>b.c.push({v:'',man:0}));S.mv.forEach(m=>S.au[K(m)]=auto(m));if(!S.ck)sync();
+ render();scrollTo(0,0)}
+onbeforeunload=e=>{if(S)e.preventDefault()};
+render();
+</script></body></html>
