@@ -34,18 +34,18 @@ main p{margin:.3em 0}
 </style></head><body>
 <header><b>JCraft: Eyes of Ender Moveset Builder</b><span id="hb"></span></header>
 <main id="app"></main>
-<footer id="ft" hidden><button class="p" onclick="dl()">Export .md</button><button onclick="cp(this)">Copy markdown</button></footer>
+<footer id="ft" hidden><button class="p" onclick="dl()">Export .md</button><button onclick="V=1;render();scrollTo(0,0)">Copy markdown</button></footer>
 <script>
 const $=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 const SL=['M1','Heavy','Barrage','Sp1','Sp2','Sp3','Utility','Ultimate'],VR=[['','Standing'],['Cr.','Crouching'],['Ae.','Aerial']],
 ST=['Category','Windup','Advantage','Endlag','Damage','Cooldown','Extra'],CAT=['Starter','Extender','Finisher','Zoning','Utility'],
 LT=['Short','Medium','Long','N/A'],LD=['Low','Medium','High','N/A'],
 EX=['Armor {amount}','Hyperarmor','Knockdown','Knockback','Long Range Effects','Meter Use','Meter Charge','Meter Requirement','Potion Effect(s)'],
-LV={short:1,low:1,medium:2,med:2,long:3,high:3};
-let S=null;
+TK={s:4,m:10.5,l:17},SP={on:0,max:2000};
+let S=null,V=0;
 const blank=()=>({name:'',arch:'',desc:'',pros:[],cons:[],pas:[],mv:[],gp:['','',''],ck:'',au:{},bb:[]}),
 K=m=>m.v+m.s,lvl=s=>s=='Damage'?LD:LT,
-rk=x=>{const m=x&&String(x.v).toLowerCase().match(/short|low|medium|med|long|high|\d+(?:\.\d+)?/g);return m?Math.max(...m.map(w=>LV[w]||parseFloat(w))):NaN},
+rk=x=>{const m=x&&String(x.v).toLowerCase().match(/short|low|medium|med|long|high|\d+(?:\.\d+)?/g);return m?Math.max(...m.map(w=>/^\d/.test(w)?parseFloat(w):/^(short|low)$/.test(w)?TK.s:/^med/.test(w)?TK.m:TK.l)):NaN},
 auto=m=>{const a=rk(m.st.Advantage);return isNaN(a)?'':S.mv.filter(o=>o!==m&&rk(o.st.Windup)<=a).map(K).join(', ')},
 srt=()=>S.mv.sort((a,b)=>SL.indexOf(a.s)-SL.indexOf(b.s)||VR.findIndex(x=>x[0]==a.v)-VR.findIndex(x=>x[0]==b.v)),
 lineOf=(L,k)=>L.findIndex(l=>l.includes('>')&&l.split('>')[0].trim().toLowerCase()==k.toLowerCase());
@@ -66,7 +66,7 @@ ad=k=>{S[k].push('');render();const n=document.querySelectorAll('#'+k+' input');
 rc=()=>{if(confirm('Rebuild every line from the move stats? Manual edits to the Combo Key are lost.')){S.ck='';S.au={};sync()}},
 bs=(i,j,v)=>{const c=S.bb[i].c;c.length=j;c.push(v=='\u270e'?{v:'',man:1}:{v,man:0});if(v)c.push({v:'',man:0});render()},
 rm=(i,j)=>{const c=S.bb[i].c;c.length=j;c.push({v:'',man:0});render()},
-gh=()=>{if(confirm('Leave the editor? Anything not exported is lost.')){S=null;render()}};
+gh=()=>{if(confirm('Leave the editor? Anything not exported is lost.')){S=null;V=0;render()}};
 function addMv(){const s=$('sl').value,v=$('vr').value;if(S.mv.some(m=>m.s==s&&m.v==v))return alert(v+s+' already exists.');
  S.mv.push({s,v,n:'',d:'',st:{}});srt();sync();render()}
 function opts(i,j){const c=S.bb[i].c,p=j&&c[j-1].v;let o=S.mv.map(K);
@@ -74,11 +74,11 @@ function opts(i,j){const c=S.bb[i].c,p=j&&c[j-1].v;let o=S.mv.map(K);
   if(n.length)o=o.filter(k=>n.includes(k.toLowerCase()))}}
  return o}
 const ol=(i,j,v)=>{const o=opts(i,j);if(v&&!o.includes(v))o.push(v);return o};
-function sr(m,i,s){const x=m.st[s];let c;
+function sr(m,i,s){const x=m.st[s],t3=/^(Windup|Advantage|Endlag)$/.test(s),H={Short:' (1-7 ticks)',Medium:' (8-13)',Long:' (14+)'};let c;
  if(s=='Category')c=CAT.map(t=>`<label class="ch"><input type="checkbox" ${x.v.includes(t)?'checked':''} onchange="cat(${i},'${t}',this.checked)">${t}</label>`).join('');
  else if(s=='Extra')c=`<input type="text" list="ex" value="${E(x.v)}" placeholder="Armor 2, Hyperarmor, Knockdown..." oninput="sv(${i},'Extra',this.value)">`;
- else c=(x.m?`<input type="text" inputmode="decimal" class="sm" value="${E(x.v)}" placeholder="number" oninput="sv(${i},'${s}',this.value)">`
-  :`<select onchange="sv(${i},'${s}',this.value)"><option value="">-</option>${lvl(s).map(o=>`<option ${o==x.v?'selected':''}>${o}</option>`).join('')}</select>`)
+ else c=(x.m?`<input type="text" inputmode="decimal" class="sm" value="${E(x.v)}" placeholder="${t3?'ticks':'number'}" oninput="sv(${i},'${s}',this.value)">`
+  :`<select onchange="sv(${i},'${s}',this.value)"><option value="">-</option>${lvl(s).map(o=>`<option value="${o}" ${o==x.v?'selected':''}>${o}${t3?H[o]||'':''}</option>`).join('')}</select>`)
   +`<button class="x" onclick="tg(${i},'${s}')" title="Switch between presets and a manual number">${x.m?'Aa':'123'}</button>`;
  return `<div class="row"><span class="lb">${s}</span><div class="cl">${c}</div><button class="x" onclick="rs(${i},'${s}')" title="Remove stat">×</button></div>`}
 const mc=(m,i)=>`<div class="mv"><div class="row"><span class="tag">${K(m)}</span><input type="text" placeholder="Move name" value="${E(m.n)}" oninput="S.mv[${i}].n=this.value"><button class="x" onclick="dm(${i})" title="Remove move">×</button></div>
@@ -100,12 +100,14 @@ const editor=()=>`<div class="pn"><input type="text" class="big" placeholder="St
 <h2>Moveset</h2><div class="pn">${S.mv.map(mc).join('')}<button class="p" onclick="$('pk').hidden=!$('pk').hidden">Add a move</button>
 <div id="pk" class="row" hidden><select id="sl">${SL.map(x=>`<option>${x}</option>`).join('')}</select><select id="vr">${VR.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select><button class="p" onclick="addMv()">Add</button></div></div>
 <h2>Playstyle</h2><div class="pn"><h3>Gameplan</h3>${['Neutral','Advantage','Disadvantage'].map((t,i)=>`<label class="lb">${t}</label><textarea oninput="S.gp[${i}]=this.value">${E(S.gp[i])}</textarea>`).join('')}
-<h3>Combo Key</h3><p class="lb">Filled in from each move's Advantage and Windup: a move combos into moves with an equal or shorter Windup. Edit any line by hand; a line is recalculated when its move's stats change.</p>
+<h3>Combo Key</h3><p class="lb">Filled in from each move's Advantage and Windup: a move combos into moves with an equal or shorter Windup. Short is 1-7 ticks, Medium 8-13 and Long 14+; the calculator uses one value per level (below; Long is open-ended, so it defaults to 17) and manual numbers count as ticks. Edit any line by hand; a line is recalculated when its move's stats change.</p>
+<div class="row">${[['s','Short'],['m','Medium'],['l','Long']].map(([k,n])=>`<label class="ch">${n} <input type="number" step="0.5" min="1" style="width:72px" value="${TK[k]}" onchange="TK.${k}=+this.value||1;sync()"> ticks</label>`).join('')}</div>
 <textarea id="ck" class="mono" style="min-height:170px" oninput="S.ck=this.value"></textarea><button onclick="rc()">Recalculate all lines</button>
 <h3>Bread &amp; Butters</h3>${S.bb.map(bc).join('')}<button onclick="S.bb.push({n:'',c:[{v:'',man:0}]});render()">Add a combo</button></div>
 <datalist id="ex">${EX.map(x=>`<option value="${E(x)}">`).join('')}</datalist>`;
-function render(){const h=$('hb');$('ft').hidden=!S;
+function render(){const h=$('hb');$('ft').hidden=!S||V;
  if(!S){h.innerHTML='';$('app').innerHTML=home();return}
+ if(V){h.innerHTML='<button class="p" onclick="V=0;render()">Back to editor</button>';$('app').innerHTML=cview();sa(0);return}
  h.innerHTML='<button class="p" onclick="pv()">Preview</button><button onclick="gh()">Home</button>';
  $('app').innerHTML=editor();$('ck').value=S.ck}
 const sx=x=>Array.isArray(x.v)?x.v.join(', '):x.v,nl=t=>String(t||'').trim().split('\n').join('  \n');
@@ -125,7 +127,23 @@ function pv(){const w=window.open('','_blank');if(!w)return alert('Allow pop-ups
  w.document.write(`<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(S.name||'Preview')}</title><style>${document.querySelector('style').textContent}</style><main class="pn" style="margin:18px auto">${mh(md())}</main>`);w.document.close()}
 function dl(){const n=(S.name||'').replace(/[^\w\- ]+/g,'').trim().replace(/ +/g,'_'),a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([md()],{type:'text/markdown'}));a.download=(n||'moveset')+'.md';a.click()}
-function cp(b){navigator.clipboard.writeText(md()).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy markdown',1500)})}
+const cut=(t,n)=>{const o=[];let c='';const f=()=>{if(c.trim())o.push(c.trim());c=''};
+ for(const b of t.split(/\n(?=#{1,3} )/)){
+  if(b.length>n){f();
+   for(const l of b.split('\n')){
+    if((c?c.length+1:0)+l.length>n)f();
+    if(l.length>n)for(let i=0;i<l.length;i+=n)o.push(l.slice(i,i+n));
+    else c+=(c?'\n':'')+l}
+   f()}
+  else if(c.length+b.length+1>n){f();c=b}
+  else c+=(c?'\n':'')+b}
+ f();return o};
+function cview(){const t=md(),p=SP.on?cut(t,SP.max):[t];
+ return `<div class="pn"><h2 style="margin-top:0">Copy markdown</h2><div class="row"><label class="ch"><input type="checkbox" ${SP.on?'checked':''} onchange="SP.on=this.checked;render()">Split into parts</label>${SP.on?`<label class="ch">Max characters per part <input type="number" min="200" step="100" style="width:90px" value="${SP.max}" onchange="SP.max=Math.max(200,+this.value||2000);render()"></label>`:''}</div>
+<p class="lb">${t.length} characters in total. Discord allows 2000 per message (4000 with Nitro).${SP.on?` Cut into ${p.length} part${p.length>1?'s':''}, split between sections where possible.`:''}</p></div>
+${p.map((x,i)=>`<div class="pn"><div class="row"><b style="flex:1">${p.length>1?`Part ${i+1} of ${p.length}`:'Full text'} <small style="color:var(--mut);font-weight:400">${x.length} characters</small></b><button onclick="sa(${i})">Select all</button><button class="p" onclick="cc(${i},this)">Copy</button></div><textarea readonly class="mono cb" style="min-height:${p.length>1?150:320}px">${E(x)}</textarea></div>`).join('')}`}
+const sa=i=>{const t=document.querySelectorAll('.cb')[i];t.focus({preventScroll:true});t.select();t.setSelectionRange(0,t.value.length)},
+cc=(i,b)=>{sa(i);const v=document.querySelectorAll('.cb')[i].value;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).catch(()=>document.execCommand('copy')).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1500)})};
 const fl=i=>{const f=i.files[0];if(f)f.text().then(t=>$('it').value=t)};
 function pst(k,x){
  if(k=='Category')return{v:x.split(/[,\/&]|\band\b/i).map(t=>CAT.find(c=>c.toLowerCase()==t.trim().toLowerCase())).filter(Boolean)};
