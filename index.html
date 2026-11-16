@@ -31,17 +31,22 @@ input.big{font:1.4em Georgia,serif;font-weight:bold}input.sm{width:130px}
 footer{position:fixed;bottom:0;left:0;right:0;background:var(--pn);border-top:1px solid var(--ln);padding:10px;display:flex;gap:8px;justify-content:center}
 .t{display:inline-block;border:1px solid var(--ln);border-radius:3px;padding:1px 8px;margin:2px 4px 2px 0;font-size:.9em}.t b{margin-right:6px;color:var(--mut)}
 main p{margin:.3em 0}
+h4{font:bold 1.2em Georgia,"Linux Libertine",serif;margin:18px 0 2px;padding-left:10px;border-left:4px solid var(--ac)}
+.hint{color:var(--mut);font-size:.88em;margin:0 0 4px}.fl{display:block;font-weight:bold;margin-top:8px}
+select.tag{border:0;padding:4px 6px;cursor:pointer}select.tag option{background:var(--pn);color:var(--ink);font-weight:normal}
 </style></head><body>
 <header><b>JCraft: Eyes of Ender Moveset Builder</b><span id="hb"></span></header>
 <main id="app"></main>
 <footer id="ft" hidden><button class="p" onclick="dl()">Export .md</button><button onclick="V=1;render();scrollTo(0,0)">Copy markdown</button></footer>
 <script>
 const $=id=>document.getElementById(id),E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
-const SL=['M1','Heavy','Barrage','Sp1','Sp2','Sp3','Utility','Ultimate'],VR=[['','Standing'],['Cr.','Crouching'],['Ae.','Aerial']],
+const SL=['M1','Heavy','Barrage','Sp1','Sp2','Sp3','Utility','Ultimate','Throw'],VR=[['','Standing'],['Cr.','Crouching'],['Ae.','Aerial']],
 ST=['Category','Windup','Advantage','Endlag','Damage','Cooldown','Extra'],CAT=['Starter','Extender','Finisher','Zoning','Utility'],
 LT=['Short','Medium','Long','N/A'],LD=['Low','Medium','High','N/A'],
 EX=['Armor {amount}','Hyperarmor','Knockdown','Knockback','Long Range Effects','Meter Use','Meter Charge','Meter Requirement','Potion Effect(s)'],
-TK={s:4,m:10.5,l:17},SP={on:0,max:2000};
+TK={s:4,m:10.5,l:17},SP={on:0,max:2000},
+DESC={Archetype:'Archetype Placeholder',Neutral:'Neutral Placeholder',Advantage:'Advantage Placeholder',Disadvantage:'Disadvantage Placeholder'},
+ALL=SL.flatMap(s=>s=='Throw'?[s]:VR.map(v=>v[0]+s));
 let S=null,V=0;
 const blank=()=>({name:'',arch:'',desc:'',pros:[],cons:[],pas:[],mv:[],gp:['','',''],ck:'',au:{},bb:[]}),
 K=m=>m.v+m.s,lvl=s=>s=='Damage'?LD:LT,
@@ -67,9 +72,18 @@ rc=()=>{if(confirm('Rebuild every line from the move stats? Manual edits to the 
 bs=(i,j,v)=>{const c=S.bb[i].c;c.length=j;c.push(v=='\u270e'?{v:'',man:1}:{v,man:0});if(v)c.push({v:'',man:0});render()},
 rm=(i,j)=>{const c=S.bb[i].c;c.length=j;c.push({v:'',man:0});render()},
 gh=()=>{if(confirm('Leave the editor? Anything not exported is lost.')){S=null;V=0;render()}};
-function addMv(){const s=$('sl').value,v=$('vr').value;if(S.mv.some(m=>m.s==s&&m.v==v))return alert(v+s+' already exists.');
+function ty(i,k){const m=S.mv[i],o=K(m),v=(k.match(/^(Cr\.|Ae\.)/)||[''])[0],s=k.slice(v.length);
+ if(k==o)return;
+ if(s=='Throw'&&Object.keys(m.st).length&&!confirm('Throw moves have no stats. Remove the stats of this move?'))return render();
+ const re=new RegExp('(^|[^\\w.])'+o.replace(/\./g,'\\.')+'(?!\\w)','gmi'),f=x=>x.replace(re,'$1'+k);
+ m.v=v;m.s=s;if(s=='Throw')m.st={};
+ S.ck=f(S.ck);const au={};for(const q in S.au)au[q==o?k:q]=f(S.au[q]);S.au=au;
+ S.bb.forEach(b=>b.c.forEach(x=>{if(x.v==o)x.v=k}));
+ srt();sync(k);render()}
+function addMv(){const s=$('sl').value,v=s=='Throw'?'':$('vr').value;if(S.mv.some(m=>m.s==s&&m.v==v))return alert(v+s+' already exists.');
  S.mv.push({s,v,n:'',d:'',st:{}});srt();sync();render()}
 function opts(i,j){const c=S.bb[i].c,p=j&&c[j-1].v;let o=S.mv.map(K);
+ if(/^throw$/i.test(p))return[];
  if(p){const L=S.ck.split('\n'),x=lineOf(L,p);if(x>=0){const n=L[x].slice(L[x].indexOf('>')+1).split(',').map(t=>t.trim().toLowerCase()).filter(t=>o.some(k=>k.toLowerCase()==t));
   if(n.length)o=o.filter(k=>n.includes(k.toLowerCase()))}}
  return o}
@@ -81,10 +95,10 @@ function sr(m,i,s){const x=m.st[s],t3=/^(Windup|Advantage|Endlag)$/.test(s),H={S
   :`<select onchange="sv(${i},'${s}',this.value)"><option value="">-</option>${lvl(s).map(o=>`<option value="${o}" ${o==x.v?'selected':''}>${o}${t3?H[o]||'':''}</option>`).join('')}</select>`)
   +`<button class="x" onclick="tg(${i},'${s}')" title="Switch between presets and a manual number">${x.m?'Aa':'123'}</button>`;
  return `<div class="row"><span class="lb">${s}</span><div class="cl">${c}</div><button class="x" onclick="rs(${i},'${s}')" title="Remove stat">×</button></div>`}
-const mc=(m,i)=>`<div class="mv"><div class="row"><span class="tag">${K(m)}</span><input type="text" placeholder="Move name" value="${E(m.n)}" oninput="S.mv[${i}].n=this.value"><button class="x" onclick="dm(${i})" title="Remove move">×</button></div>
+const mc=(m,i)=>`<div class="mv"><div class="row"><select class="tag" onchange="ty(${i},this.value)">${ALL.map(k=>`<option ${k==K(m)?'selected':''} ${k!=K(m)&&S.mv.some(o=>K(o)==k)?'disabled':''}>${k}</option>`).join('')}</select><input type="text" placeholder="Move name" value="${E(m.n)}" oninput="S.mv[${i}].n=this.value"><button class="x" onclick="dm(${i})" title="Remove move">×</button></div>
 <textarea placeholder="Move description" oninput="S.mv[${i}].d=this.value">${E(m.d)}</textarea>
-${ST.filter(s=>m.st[s]).map(s=>sr(m,i,s)).join('')}
-<select onchange="as(${i},this.value)"><option value="">Add stat</option>${ST.filter(s=>!m.st[s]).map(s=>`<option>${s}</option>`).join('')}</select></div>`,
+${m.s=='Throw'?'':ST.filter(s=>m.st[s]).map(s=>sr(m,i,s)).join('')}
+<select ${m.s=='Throw'?'hidden':''} onchange="as(${i},this.value)"><option value="">Add stat</option>${ST.filter(s=>!m.st[s]).map(s=>`<option>${s}</option>`).join('')}</select></div>`,
 lst=(k,t)=>`<h3>${t}</h3>`+S[k].map((x,i)=>`<div class="row"><input type="text" value="${E(x)}" oninput="S.${k}[${i}]=this.value"><button class="x" onclick="S.${k}.splice(${i},1);render()" title="Remove">×</button></div>`).join('')+(S[k].length<4?`<button onclick="ad('${k}')">Add a ${k=='pros'?'pro':'con'}</button>`:''),
 pc=(p,i)=>`<div class="mv"><div class="row"><input type="text" placeholder="Passive name" value="${E(p.n)}" oninput="S.pas[${i}].n=this.value"><button class="x" onclick="S.pas.splice(${i},1);render()" title="Remove">×</button></div><textarea placeholder="Passive description" oninput="S.pas[${i}].d=this.value">${E(p.d)}</textarea></div>`,
 bc=(b,i)=>`<div class="mv"><div class="row"><input type="text" placeholder="Combo name (optional)" value="${E(b.n)}" oninput="S.bb[${i}].n=this.value"><button class="x" onclick="S.bb.splice(${i},1);render()" title="Remove combo">×</button></div><div class="cl">${b.c.map((x,j)=>x.man?`<input type="text" class="sm" value="${E(x.v)}" placeholder="manual" oninput="S.bb[${i}].c[${j}].v=this.value"><button class="x" onclick="rm(${i},${j})" title="Use the move list">×</button>`:`<select onchange="bs(${i},${j},this.value)"><option value="">${j?'Then':'Start'}</option>${ol(i,j,x.v).map(o=>`<option ${o==x.v?'selected':''}>${E(o)}</option>`).join('')}<option value="\u270e">Manual input</option></select>`).join('<span class="lb">&gt;</span>')}</div></div>`;
@@ -93,13 +107,13 @@ const home=()=>`<div class="pn"><h1>JCraft Moveset Builder</h1><p>Write, preview
 <div id="im" hidden><p class="lb">Paste a moveset in the template markdown, or choose a .md file.</p><textarea id="it" class="mono" style="min-height:200px" placeholder="# Stand Name&#10;## Details&#10;..."></textarea>
 <div class="row"><button class="p" onclick="doImp($('it').value)">Load moveset</button><input type="file" accept=".md,.txt" onchange="fl(this)"></div></div></div>`;
 const editor=()=>`<div class="pn"><input type="text" class="big" placeholder="Stand or spec name" value="${E(S.name)}" oninput="S.name=this.value"></div>
-<h2>Details</h2><div class="pn"><label class="lb">Archetype</label><input type="text" placeholder="{char1 char2 ARCHETYPE}" value="${E(S.arch)}" oninput="S.arch=this.value">
-<label class="lb" style="margin-top:8px">Stand Description + Gimmick</label><textarea oninput="S.desc=this.value">${E(S.desc)}</textarea>
+<h2>Details</h2><div class="pn"><label class="fl">Archetype</label><p class="hint">${DESC.Archetype}</p><input type="text" placeholder="{char1 char2 ARCHETYPE}" value="${E(S.arch)}" oninput="S.arch=this.value">
+<label class="fl">Stand Description + Gimmick</label><textarea oninput="S.desc=this.value">${E(S.desc)}</textarea>
 <div class="two"><div id="pros">${lst('pros','Pros')}</div><div id="cons">${lst('cons','Cons')}</div></div>
 <h3>Passives</h3>${S.pas.map(pc).join('')}<button onclick="S.pas.push({n:'',d:''});render()">Add a passive</button></div>
 <h2>Moveset</h2><div class="pn">${S.mv.map(mc).join('')}<button class="p" onclick="$('pk').hidden=!$('pk').hidden">Add a move</button>
-<div id="pk" class="row" hidden><select id="sl">${SL.map(x=>`<option>${x}</option>`).join('')}</select><select id="vr">${VR.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select><button class="p" onclick="addMv()">Add</button></div></div>
-<h2>Playstyle</h2><div class="pn"><h3>Gameplan</h3>${['Neutral','Advantage','Disadvantage'].map((t,i)=>`<label class="lb">${t}</label><textarea oninput="S.gp[${i}]=this.value">${E(S.gp[i])}</textarea>`).join('')}
+<div id="pk" class="row" hidden><select id="sl" onchange="$('vr').disabled=this.value=='Throw'">${SL.map(x=>`<option>${x}</option>`).join('')}</select><select id="vr">${VR.map(x=>`<option value="${x[0]}">${x[1]}</option>`).join('')}</select><button class="p" onclick="addMv()">Add</button></div></div>
+<h2>Playstyle</h2><div class="pn"><h3>Gameplan</h3>${['Neutral','Advantage','Disadvantage'].map((t,i)=>`<h4>${t}</h4><p class="hint">${DESC[t]}</p><textarea oninput="S.gp[${i}]=this.value">${E(S.gp[i])}</textarea>`).join('')}
 <h3>Combo Key</h3><p class="lb">Filled in from each move's Advantage and Windup: a move combos into moves with an equal or shorter Windup. Short is 1-7 ticks, Medium 8-13 and Long 14+; the calculator uses one value per level (below; Long is open-ended, so it defaults to 17) and manual numbers count as ticks. Edit any line by hand; a line is recalculated when its move's stats change.</p>
 <div class="row">${[['s','Short'],['m','Medium'],['l','Long']].map(([k,n])=>`<label class="ch">${n} <input type="number" step="0.5" min="1" style="width:72px" value="${TK[k]}" onchange="TK.${k}=+this.value||1;sync()"> ticks</label>`).join('')}</div>
 <textarea id="ck" class="mono" style="min-height:170px" oninput="S.ck=this.value"></textarea><button onclick="rc()">Recalculate all lines</button>
@@ -122,6 +136,7 @@ function mh(t){let o='',ul=0;const cl=()=>{if(ul){o+='</ul>';ul=0}};
   if(m=l.match(/^(#{1,3}) (.*)/)){cl();o+=`<h${m[1].length}>${E(m[2])}</h${m[1].length}>`}
   else if(m=l.match(/^- (.*)/)){if(!ul){o+='<ul>';ul=1}o+=`<li>${E(m[1])}</li>`}
   else if(m=l.match(/^\[(\w+): (.*)\]$/))o+=`<span class="t"><b>${m[1]}</b>${E(m[2])}</span> `;
+  else if(/^(Neutral|Advantage|Disadvantage)$/.test(l)){cl();o+=`<h4>${l}</h4>`}
   else if(l){cl();o+=`<p>${E(l)}</p>`}});cl();return o}
 function pv(){const w=window.open('','_blank');if(!w)return alert('Allow pop-ups to open the preview.');
  w.document.write(`<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(S.name||'Preview')}</title><style>${document.querySelector('style').textContent}</style><main class="pn" style="margin:18px auto">${mh(md())}</main>`);w.document.close()}
@@ -165,11 +180,11 @@ function doImp(t){
    else if(k.startsWith('stand description'))s.desc=tx(b);
    else if(k.startsWith('pros')||k.startsWith('cons'))s[k[0]=='p'?'pros':'cons']=b.filter(x=>/^-\s*\S/.test(x)).map(x=>x.replace(/^-\s*/,'')).filter(x=>!/^\d$/.test(x)).slice(0,4)}
   else if(sec=='moveset'){
-   const m=h.match(/^(Cr\.|Ae\.)?(M1|Heavy|Barrage|Sp[123]|Utility|Ultimate)\s*:\s*(.*)$/i);
+   const m=h.match(/^(Cr\.|Ae\.)?(M1|Heavy|Barrage|Sp[123]|Utility|Ultimate|Throw)\s*:\s*(.*)$/i);
    if(k.startsWith('passive'))s.pas.push({n:h.replace(/^passive:?\s*/i,''),d:tx(b)});
-   else if(m){const v=m[1]?m[1][0].toUpperCase()+m[1].slice(1).toLowerCase():'',sl=SL.find(x=>x.toLowerCase()==m[2].toLowerCase()),d=[],st={};
+   else if(m){const sl=SL.find(x=>x.toLowerCase()==m[2].toLowerCase()),v=m[1]&&sl!='Throw'?m[1][0].toUpperCase()+m[1].slice(1).toLowerCase():'',d=[],st={};
     b.forEach(l=>{const q=l.match(/^\[(\w+)\s*:\s*(.*)\]\s*$/);
-     if(q){const key=ST.find(x=>x.toLowerCase()==q[1].toLowerCase()),val=q[2].trim();if(key&&val)st[key]=pst(key,val)}else d.push(l)});
+     if(q){const key=ST.find(x=>x.toLowerCase()==q[1].toLowerCase()),val=q[2].trim();if(key&&val&&sl!='Throw')st[key]=pst(key,val)}else d.push(l)});
     if((m[3].trim()=='Move Name'&&!Object.keys(st).length)||s.mv.some(o=>K(o)==v+sl))return;
     s.mv.push({s:sl,v,n:m[3].trim(),d:d.join('\n').trim(),st})}}
   else if(sec=='playstyle'){
