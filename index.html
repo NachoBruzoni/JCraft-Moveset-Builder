@@ -45,7 +45,7 @@ ST=['Category','Windup','Advantage','Endlag','Damage','Cooldown','Extra'],CAT=['
 LT=['Short','Medium','Long','N/A'],LD=['Low','Medium','High','N/A'],
 EX=['Armor {amount}','Hyperarmor','Knockdown','Knockback','Long Range Effects','Meter Use','Meter Charge','Meter Requirement','Potion Effect(s)'],
 TK={s:4,m:10.5,l:17},SP={on:0,max:2000},
-DESC={Archetype:'Archetype Placeholder',Neutral:'Neutral Placeholder',Advantage:'Advantage Placeholder',Disadvantage:'Disadvantage Placeholder'},
+DESC={Archetype:'Describe the moveset with two words and, in caps, add an Archetype (e.g.: RUSHDOWN/ZONER/TRICKSTER)',Neutral:'Any position where players are interacting but none is actually harming the other directly. This is when projectiles and long range attacks are used.',Advantage:'Whenever the player has succeeded in landing a hit on the other and can follow up with a move or combo.',Disadvantage:'Whenever the player is the victim of a combo or constant pressure.'},
 ALL=SL.flatMap(s=>s=='Throw'?[s]:VR.map(v=>v[0]+s));
 let S=null,V=0;
 const blank=()=>({name:'',arch:'',desc:'',pros:[],cons:[],pas:[],mv:[],gp:['','',''],ck:'',au:{},bb:[]}),
